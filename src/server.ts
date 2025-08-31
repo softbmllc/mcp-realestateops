@@ -103,9 +103,32 @@ function buildServer() {
 const app = express();
 app.get('/favicon.ico', (_req: Request, res: Response) => res.status(204).end());
 app.get('/', (_req: Request, res: Response) => res.send('OK'));
+
+// Preflight/HEAD for MCP endpoint
+app.head('/mcp', (_req: Request, res: Response) => res.status(200).end());
+app.options('/mcp', (_req: Request, res: Response) => {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  }).status(204).end();
+});
+
+// SSE endpoint at /mcp
 app.get('/mcp', (_req: Request, res: Response) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   const server = buildServer();
   const transport = new SSEServerTransport('/mcp', res);
+  server.connect(transport);
+});
+
+// Alternate SSE endpoint at /sse (some clients expect this path)
+app.head('/sse', (_req: Request, res: Response) => res.status(200).end());
+app.options('/sse', (_req: Request, res: Response) => res.status(204).end());
+app.get('/sse', (_req: Request, res: Response) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const server = buildServer();
+  const transport = new SSEServerTransport('/sse', res);
   server.connect(transport);
 });
 const PORT = Number(process.env.PORT || 3000);
