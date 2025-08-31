@@ -140,12 +140,9 @@ app.get('/.well-known/ai-plugin.json', (req: Request, res: Response) => {
     name_for_human: 'MCP RealEstateOps',
     name_for_model: 'realestateops',
     description_for_human: 'Notion ops (upsert, summaries) for Real Estate via MCP.',
-    description_for_model: 'Tools: notion.upsert, notion.hub_summary_projects over SSE.',
+    description_for_model: 'Tools: notion.upsert and notion.hub_summary_projects.',
     auth: { type: 'none' },
-    api: { type: 'openapi', url: apiUrl, is_user_authenticated: false },
-    logo_url: absoluteEndpoint(req, '/logo.png'),
-    contact_email: 'ops@example.com',
-    legal_info_url: 'https://investopsmiami.com/legal'
+    api: { type: 'openapi', url: apiUrl, is_user_authenticated: false }
   });
 });
 
