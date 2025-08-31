@@ -10,6 +10,12 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import type { BlockObjectRequest, BlockObjectResponse, PartialBlockObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 import { z } from 'zod';
 
+function absoluteEndpoint(req: Request, path: string) {
+  const proto = (req.headers['x-forwarded-proto'] as string) || 'http';
+  const host = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
+  return `${proto}://${host}${path}`;
+}
+
 const notion = new Notion({ auth: process.env.NOTION_TOKEN! });
 const HUB_PAGE = process.env.REAL_ESTATE_PAGE_ID!;
 const DBS: Record<string, string> = JSON.parse(fs.readFileSync('dbs.json', 'utf8'));
@@ -109,8 +115,8 @@ app.head('/mcp', (_req: Request, res: Response) => res.status(200).end());
 app.options('/mcp', (_req: Request, res: Response) => {
   res.set({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS,POST',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept'
   }).status(204).end();
 });
 
@@ -118,7 +124,7 @@ app.options('/mcp', (_req: Request, res: Response) => {
 app.get('/mcp', (_req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const server = buildServer();
-  const transport = new SSEServerTransport('/mcp', res);
+  const transport = new SSEServerTransport(absoluteEndpoint(_req, '/mcp'), res);
   server.connect(transport);
 });
 
@@ -130,11 +136,17 @@ app.post('/mcp', express.json({ type: '*/*', limit: '10mb' }), (req: Request, re
 
 // Alternate SSE endpoint at /sse (some clients expect this path)
 app.head('/sse', (_req: Request, res: Response) => res.status(200).end());
-app.options('/sse', (_req: Request, res: Response) => res.status(204).end());
+app.options('/sse', (_req: Request, res: Response) => {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS,POST',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept'
+  }).status(204).end();
+});
 app.get('/sse', (_req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const server = buildServer();
-  const transport = new SSEServerTransport('/sse', res);
+  const transport = new SSEServerTransport(absoluteEndpoint(_req, '/sse'), res);
   server.connect(transport);
 });
 
