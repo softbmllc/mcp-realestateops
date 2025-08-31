@@ -122,6 +122,12 @@ app.get('/mcp', (_req: Request, res: Response) => {
   server.connect(transport);
 });
 
+// HTTP POST endpoint for MCP messages (used by clients after session starts)
+app.post('/mcp', express.json({ type: '*/*', limit: '10mb' }), (req: Request, res: Response) => {
+  // Use SDK's handler (cast to any to avoid type issues across versions)
+  (SSEServerTransport as any).handlePost?.(req, res);
+});
+
 // Alternate SSE endpoint at /sse (some clients expect this path)
 app.head('/sse', (_req: Request, res: Response) => res.status(200).end());
 app.options('/sse', (_req: Request, res: Response) => res.status(204).end());
@@ -130,6 +136,11 @@ app.get('/sse', (_req: Request, res: Response) => {
   const server = buildServer();
   const transport = new SSEServerTransport('/sse', res);
   server.connect(transport);
+});
+
+// POST alias for /sse as well
+app.post('/sse', express.json({ type: '*/*', limit: '10mb' }), (req: Request, res: Response) => {
+  (SSEServerTransport as any).handlePost?.(req, res);
 });
 const PORT = Number(process.env.PORT || 3000);
 app.listen(PORT, '0.0.0.0', () => console.log(`MCP on http://localhost:${PORT}/mcp`));
