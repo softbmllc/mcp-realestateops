@@ -107,8 +107,86 @@ function buildServer() {
 }
 
 const app = express();
+
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  next();
+});
+
 app.get('/favicon.ico', (_req: Request, res: Response) => res.status(204).end());
-app.get('/', (_req: Request, res: Response) => res.send('OK'));
+app.head('/', (_req: Request, res: Response) => res.status(200).end());
+app.options('/', (_req: Request, res: Response) => res.status(204).end());
+app.get('/', (req: Request, res: Response) => {
+  const base = absoluteEndpoint(req, '');
+  res.json({
+    name: 'MCP RealEstateOps',
+    version: '1.0.0',
+    sse: absoluteEndpoint(req, '/sse'),
+    health: absoluteEndpoint(req, '/healthz'),
+    docs: absoluteEndpoint(req, '/openapi.yaml')
+  });
+});
+
+app.get('/healthz', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+app.get('/.well-known/ai-plugin.json', (req: Request, res: Response) => {
+  const apiUrl = absoluteEndpoint(req, '/openapi.yaml');
+  res.json({
+    schema_version: 'v1',
+    name_for_human: 'MCP RealEstateOps',
+    name_for_model: 'realestateops',
+    description_for_human: 'Notion ops (upsert, summaries) for Real Estate via MCP.',
+    description_for_model: 'Tools: notion.upsert, notion.hub_summary_projects over SSE.',
+    auth: { type: 'none' },
+    api: { type: 'openapi', url: apiUrl, is_user_authenticated: false },
+    logo_url: absoluteEndpoint(req, '/logo.png'),
+    contact_email: 'ops@example.com',
+    legal_info_url: 'https://investopsmiami.com/legal'
+  });
+});
+
+app.get('/openapi.yaml', (req: Request, res: Response) => {
+  const base = absoluteEndpoint(req, '');
+  const yaml = `openapi: 3.0.1
+info:
+  title: MCP RealEstateOps
+  version: "1.0.0"
+servers:
+  - url: ${base}
+paths:
+  /:
+    get:
+      summary: Basic info
+      responses:
+        "200":
+          description: OK
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /sse:
+    get:
+      summary: MCP SSE endpoint (Server-Sent Events)
+      responses:
+        "200":
+          description: SSE stream
+`;
+  res.type('text/yaml').send(yaml);
+});
+
+app.get('/logo.png', (_req: Request, res: Response) => {
+  const png1x1 = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGD4DwAB3gF+5m3RvwAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  res.type('image/png').send(png1x1);
+});
 
 // Preflight/HEAD for MCP endpoint
 app.head('/mcp', (_req: Request, res: Response) => res.status(200).end());
