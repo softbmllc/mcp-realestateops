@@ -176,6 +176,30 @@ paths:
       responses:
         "200":
           description: SSE stream
+  /search:
+    get:
+      summary: Search tool (required by MCP)
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /fetch:
+    get:
+      summary: Fetch tool (required by MCP)
+      parameters:
+        - in: query
+          name: id
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
 `;
   res.type('text/yaml').send(yaml);
 });
@@ -186,6 +210,21 @@ app.get('/logo.png', (_req: Request, res: Response) => {
     'base64'
   );
   res.type('image/png').send(png1x1);
+});
+
+// Basic tools required by some MCP validators: /search and /fetch
+app.head('/search', (_req: Request, res: Response) => res.status(200).end());
+app.options('/search', (_req: Request, res: Response) => res.status(204).end());
+app.get('/search', (req: Request, res: Response) => {
+  const q = (req.query.q as string) || null;
+  res.json({ ok: true, tool: 'search', q });
+});
+
+app.head('/fetch', (_req: Request, res: Response) => res.status(200).end());
+app.options('/fetch', (_req: Request, res: Response) => res.status(204).end());
+app.get('/fetch', (req: Request, res: Response) => {
+  const id = (req.query.id as string) || null;
+  res.json({ ok: true, tool: 'fetch', id });
 });
 
 // Preflight/HEAD for MCP endpoint
